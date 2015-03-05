@@ -33,16 +33,21 @@ module DataShift
 
     def get_file( attachment_path )
 
-      unless File.exists?(attachment_path) && File.readable?(attachment_path)
+      if File.exists?(attachment_path) 
+        unless File.readable?(attachment_path)
+          logger.error("Cannot process Image from #{Dir.pwd}: Path:#{attachment_path} is NOT readable!")
+          raise PathError.new("Cannot process Image: Path:#{attachment_path} is NOT readable!")
+        end
+      else
         logger.error("Cannot process Image from #{Dir.pwd}: Invalid Path #{attachment_path}")
-        raise PathError.new("Cannot process Image : Invalid Path #{attachment_path}")
+        raise PathError.new("Cannot process Image: Invalid Path #{attachment_path}")
       end
 
       file = begin
         File.new(attachment_path, "rb")
       rescue => e
         puts e.inspect
-        raise PathError.new("ERROR : Failed to read image from #{attachment_path}")
+        raise PathError.new("ERROR: Failed to read image from #{attachment_path}")
       end
 
       file
@@ -89,8 +94,8 @@ module DataShift
         @attachment = klass.new(paperclip_attributes, :without_protection => true)
       rescue => e
         logger.error( e.backtrace)
-        logger.error("Failed to create PaperClip Attachment for cl;ass #{klass} : #{e.inspect}")
-        raise CreateAttachmentFailed.new("Failed to create PaperClip Attachment from : #{attachment_path}")
+        logger.error("Failed to create PaperClip Attachment for cl;ass #{klass}: #{e.inspect}")
+        raise CreateAttachmentFailed.new("Failed to create PaperClip Attachment from: #{attachment_path}")
       ensure
         attachment_file.close unless attachment_file.closed?
       end
@@ -98,7 +103,7 @@ module DataShift
       begin
 
         if(@attachment.save)
-          puts "Success: Created Attachment #{@attachment.id} : #{@attachment.attachment_file_name}"
+          puts "Success: Created Attachment #{@attachment.id} - #{@attachment.attachment_file_name}"
 
           if(attach_to_record_field.is_a? MethodDetail)
             DataShift::Populator.new().prepare_and_assign(attach_to_record_field, record, @attachment)
@@ -108,7 +113,7 @@ module DataShift
           end if(record && attach_to_record_field)
 
         else
-          puts "ERROR : Problem saving to DB : #{@attachment.inspect}"
+          puts "ERROR: Problem saving to DB - #{@attachment.inspect}"
           puts @attachment.errors.messages.inspect
         end
 
